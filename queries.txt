@@ -1,0 +1,19 @@
+Consortium roles: Which organizations participate in the ALPINE project, what role does each play (coordinator, materials, manufacturing, pilot operation), and which agency funds it?
+
+Publication output: For each project, list its publications together with the authors and their affiliations.
+
+Academic lineage: Trace the complete supervision chain for every doctoral researcher (e.g. who is the "academic grandparent" of Sofia Lindqvist and Tomas Berg?).
+
+Mobility: Which researchers have been affiliated with more than one organization (employment or study), and what was the direction of each move?
+
+Funding overview: For each funding agency, list the projects funded, amounts and currencies, and which companies and utilities take part in those projects.
+
+International reach: Rank researchers by the number of distinct countries represented among their co-authors (excluding their own).
+
+Citation influence: Which publications cite the 2022 cathode stability paper, directly or indirectly (transitive citation chain)?
+
+Collaboration horizon: Starting from the Halvorsen Institute of Technology, which organizations are reachable within two project-collaboration hops, and through which projects?
+
+Intellectual property to field: Which sites use technology covered by a patent held by Lumen Storage Systems, and which projects, operators and inventors are connected to them?
+
+Collaborator recommendation: Suggest pairs of researchers who have never co-authored but share at least one common co-author, and whose work relates to the same technology area.

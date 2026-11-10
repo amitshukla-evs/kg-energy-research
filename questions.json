@@ -1,0 +1,72 @@
+[
+  {
+    "question_no": 1,
+    "category": "Consortium roles",
+    "question": "Which organizations participate in the ALPINE project, what role does each play (coordinator, materials, manufacturing, pilot operation), and which agency funds it?",
+    "query": "MATCH (organization:Organization)-[participation:PARTICIPATES_IN]->(project:Project {id: 'alpine'})\nMATCH (agency:Organization)-[:FUNDS]->(project)\nRETURN organization.name AS organization, participation.role AS role, agency.name AS funding_agency\nORDER BY organization",
+    "llm_answer": "Organizations and roles:\n- Halvorsen Institute of Technology — coordinator\n- Rhine Valley University — solid-state electrolytes\n- Lumen Storage Systems — cell manufacturing\n- Fjordgrid AS — pilot operation\n\nFunding agency:\n- European Clean Energy Council"
+  },
+  {
+    "question_no": 2,
+    "category": "Publication output",
+    "question": "For each project, list its publications together with the authors and their affiliations.",
+    "query": "MATCH (paper:Publication)-[:OUTPUT_OF]->(project:Project)\nMATCH (author:Researcher)-[authorship:AUTHORED]->(paper)\nOPTIONAL MATCH (author)-[:AFFILIATED_WITH {current: true}]->(org:Organization)\nWITH project, paper, author, authorship, org ORDER BY org.name\nWITH project, paper, author, authorship, collect(DISTINCT org.name) AS affiliations\nORDER BY authorship.position\nRETURN project.name AS project, paper.title AS publication, paper.year AS year, collect({author: author.name, affiliations: affiliations}) AS authors, 'Corpus-current affiliations; publication-time affiliations not verified' AS affiliation_basis\nORDER BY project, year, publication",
+    "llm_answer": "Affiliations are as described in the corpus; publication-time affiliations are not verified.\n\nALPINE\n- Sodium-Ion Cathode Stability in Solid-State Electrolytes (2022): Katarina Novak (Rhine Valley University); Ingrid Solberg (Halvorsen Institute of Technology); Elena Voss (Lumen Storage Systems).\n- Sodium-Ion Cell Degradation Under Variable Grid Loads (2023): Ingrid Solberg and Sofia Lindqvist (Halvorsen Institute of Technology); Tomas Berg (Fjordgrid AS).\n\nMONSOON\n- Thermal Management Strategies for Stationary Batteries in Hot Climates (2024): Priya Raghunathan and Arjun Menon (Southern Peninsula Institute of Science); Daniel Okafor (Maple Ridge University).\n\nCASCADE\n- Probabilistic Load Forecasting with Gradient-Boosted Models (2023): Daniel Okafor and Li Wei (Maple Ridge University); Hannah Brooks (Pacific Cell Technologies).\n- Forecast-Aware Dispatch of Grid Batteries (2025): Hannah Brooks (Pacific Cell Technologies); Sofia Lindqvist (Halvorsen Institute of Technology); Daniel Okafor (Maple Ridge University).\n\nRECLAIM\n- Hydrometallurgical Recovery of Sodium-Ion Cathode Materials (2024): Markus Weber and Katarina Novak (Rhine Valley University)."
+  },
+  {
+    "question_no": 3,
+    "category": "Academic lineage",
+    "question": "Trace the complete supervision chain for every doctoral researcher (e.g. who is the \"academic grandparent\" of Sofia Lindqvist and Tomas Berg?).",
+    "query": "MATCH path = (researcher:Researcher)-[:SUPERVISED_BY*0..]->(ancestor:Researcher)\nWHERE researcher.doctoral_status IS NOT NULL AND NOT EXISTS { MATCH (ancestor)-[:SUPERVISED_BY]->() }\nRETURN researcher.name AS researcher, researcher.doctoral_status AS doctoral_status, [person IN nodes(path) | person.name] AS recorded_chain, CASE WHEN length(path) >= 2 THEN nodes(path)[2].name ELSE null END AS academic_grandparent\nORDER BY researcher",
+    "llm_answer": "Recorded doctoral supervision chains (researcher → supervisor):\n- Sofia Lindqvist → Ingrid Solberg → Markus Weber\n- Tomas Berg → Ingrid Solberg → Markus Weber\n- Arjun Menon → Priya Raghunathan\n- Hannah Brooks → Daniel Okafor\n\nAcademic grandparent:\n- Markus Weber is the academic grandparent of Sofia Lindqvist and Tomas Berg.\n\nAdditional context:\n- Elena Voss worked under Weber as a postdoctoral researcher; her doctoral supervisor is not stated.\n- No further doctoral supervision links are given."
+  },
+  {
+    "question_no": 4,
+    "category": "Mobility",
+    "question": "Which researchers have been affiliated with more than one organization (employment or study), and what was the direction of each move?",
+    "query": "MATCH (researcher:Researcher)-[move:MOVED_TO]->(destination:Organization)\nMATCH (origin:Organization {id: move.from_id})\nCALL (researcher) {\n  MATCH (researcher)-[affiliation:AFFILIATED_WITH]->(organization:Organization)\n  WITH affiliation, organization ORDER BY organization.name, affiliation.kind\n  RETURN collect({organization: organization.name, kind: affiliation.kind, current: affiliation.current, start: affiliation.start, end: affiliation.end, completed: affiliation.completed}) AS affiliations\n}\nRETURN researcher.name AS researcher, origin.name AS from_organization, destination.name AS to_organization, move.year AS move_year, move.kind AS move_type, affiliations\nORDER BY researcher, move_year",
+    "llm_answer": "Recorded employment/study moves:\n- Ingrid Solberg: Rhine Valley University (doctorate, 2005) → Halvorsen Institute of Technology (joined 2008).\n- Elena Voss: Rhine Valley University (postdoc, 2015–2019) → Lumen Storage Systems (2019).\n- Tomas Berg: Halvorsen Institute of Technology (doctorate, 2016) → Fjordgrid AS (2016).\n- Hannah Brooks: Maple Ridge University (doctorate, 2018) → Pacific Cell Technologies (start year not stated).\n\nTemporary visit (not a permanent move):\n- Priya Raghunathan: Southern Peninsula Institute of Science → Maple Ridge University (2019 sabbatical visit); currently at Southern Peninsula Institute of Science."
+  },
+  {
+    "question_no": 5,
+    "category": "Funding overview",
+    "question": "For each funding agency, list the projects funded, amounts and currencies, and which companies and utilities take part in those projects.",
+    "query": "MATCH (agency:Organization)-[funding:FUNDS]->(project:Project)\nOPTIONAL MATCH (organization:Organization)-[:PARTICIPATES_IN]->(project)\nWHERE organization.kind IN ['company', 'utility']\nWITH agency, funding, project, organization ORDER BY organization.name\nRETURN agency.name AS funding_agency, project.name AS project, funding.amount AS amount, funding.currency AS currency, collect(organization.name) AS companies_and_utilities\nORDER BY funding_agency, project",
+    "llm_answer": "European Clean Energy Council\n- ALPINE — EUR 4.2 million; Lumen Storage Systems and Fjordgrid AS.\n- RECLAIM — EUR 3.1 million; Lumen Storage Systems.\n\nNational Science Endowment of India\n- MONSOON — 380 million rupees; Deccan Power Corporation.\n\nCanadian Innovation Fund\n- CASCADE — CAD 2.8 million; Pacific Cell Technologies."
+  },
+  {
+    "question_no": 6,
+    "category": "International reach",
+    "question": "Rank researchers by the number of distinct countries represented among their co-authors (excluding their own).",
+    "query": "MATCH (researcher:Researcher)\nCALL (researcher) {\n  MATCH (researcher)-[:AFFILIATED_WITH {current: true}]->(own:Organization)\n  WITH DISTINCT own.country AS country ORDER BY country\n  RETURN collect(country) AS own_countries\n}\nCALL (researcher, own_countries) {\n  MATCH (researcher)-[:AUTHORED]->(:Publication)<-[:AUTHORED]-(coauthor:Researcher)-[:AFFILIATED_WITH {current: true}]->(org:Organization)\n  WHERE coauthor <> researcher AND NOT org.country IN own_countries\n  WITH DISTINCT org.country AS country ORDER BY country\n  RETURN collect(country) AS foreign_countries\n}\nRETURN researcher.name AS researcher, own_countries, foreign_countries, size(foreign_countries) AS country_count, 'Corpus-current affiliation countries, not nationality' AS country_basis\nORDER BY country_count DESC, researcher",
+    "llm_answer": "Basis: current affiliation countries, not nationality.\n\n2 countries\n- Daniel Okafor — India, Norway.\n\n1 country\n- Ingrid Solberg — Germany.\n- Katarina Novak — Norway.\n- Elena Voss — Norway.\n- Sofia Lindqvist — Canada.\n- Priya Raghunathan — Canada.\n- Arjun Menon — Canada.\n- Hannah Brooks — Norway.\n\n0 countries\n- Tomas Berg.\n- Markus Weber.\n- Li Wei."
+  },
+  {
+    "question_no": 7,
+    "category": "Citation influence",
+    "question": "Which publications cite the 2022 cathode stability paper, directly or indirectly (transitive citation chain)?",
+    "query": "MATCH path = (paper:Publication)-[:CITES*1..]->(:Publication {id: 'cathode'})\nWITH paper, path ORDER BY length(path), [node IN nodes(path) | node.title]\nRETURN paper.title AS publication, paper.year AS year, min(length(path)) AS citation_distance, CASE WHEN min(length(path)) = 1 THEN 'direct' ELSE 'indirect' END AS citation_type, collect([node IN nodes(path) | node.title]) AS citation_chains\nORDER BY citation_distance, year, publication",
+    "llm_answer": "Direct citations\n- Sodium-Ion Cell Degradation Under Variable Grid Loads (2023).\n- Hydrometallurgical Recovery of Sodium-Ion Cathode Materials (2024).\n\nIndirect citations (both via the 2023 degradation paper)\n- Thermal Management Strategies for Stationary Batteries in Hot Climates (2024).\n- Forecast-Aware Dispatch of Grid Batteries (2025)."
+  },
+  {
+    "question_no": 8,
+    "category": "Collaboration horizon",
+    "question": "Starting from the Halvorsen Institute of Technology, which organizations are reachable within two project-collaboration hops, and through which projects?",
+    "query": "MATCH path = (start:Organization {id: 'hit'})-[:PARTICIPATES_IN*2..4]-(organization:Organization)\nWHERE start <> organization AND all(node IN nodes(path) WHERE single(other IN nodes(path) WHERE other = node))\nWITH organization, path ORDER BY length(path), [node IN nodes(path) | node.name]\nRETURN organization.name AS organization, min(length(path)) / 2 AS minimum_collaboration_hops, collect({hops: length(path) / 2, route: [node IN nodes(path) | node.name], projects: [node IN nodes(path) WHERE node:Project | node.name]}) AS routes\nORDER BY minimum_collaboration_hops, organization",
+    "llm_answer": "One hop\n- Via ALPINE: Rhine Valley University; Lumen Storage Systems; Fjordgrid AS.\n- Via CASCADE: Maple Ridge University; Pacific Cell Technologies.\n\nTwo hops — additional organizations\n- Southern Peninsula Institute of Science and Deccan Power Corporation via CASCADE → Maple Ridge University → MONSOON.\n\nAdditional route that adds no new organizations\n- RECLAIM also connects Rhine Valley University and Lumen Storage Systems at the second hop."
+  },
+  {
+    "question_no": 9,
+    "category": "Intellectual property to field",
+    "question": "Which sites use technology covered by a patent held by Lumen Storage Systems, and which projects, operators and inventors are connected to them?",
+    "query": "MATCH (holder:Organization {id: 'lumen'})-[:HOLDS]->(patent:Patent)<-[:USES_PATENT]-(site:Site)-[:ESTABLISHED_UNDER]->(project:Project)\nCALL (site) {\n  MATCH (operator:Organization)-[:OPERATES]->(site)\n  WITH operator ORDER BY operator.name\n  RETURN collect(operator.name) AS operators\n}\nCALL (patent) {\n  MATCH (inventor:Researcher)-[:INVENTED]->(patent)\n  WITH inventor ORDER BY inventor.name\n  RETURN collect(inventor.name) AS inventors\n}\nCALL (patent) {\n  MATCH (patent)-[:LICENSED_IN]->(licensed:Project)\n  WITH licensed ORDER BY licensed.name\n  RETURN collect(licensed.name) AS patent_licensed_in\n}\nRETURN site.name AS site, project.name AS project, patent.id AS patent, holder.name AS patent_holder, operators, inventors, patent_licensed_in\nORDER BY site",
+    "llm_answer": "Patent: LSS-PAT-2020-114\n- Holder: Lumen Storage Systems.\n- Inventors: Elena Voss and Katarina Novak.\n- License recorded within ALPINE.\n\nSites using covered cells\n- Vestfjord Pilot Site — ALPINE; jointly operated by Fjordgrid AS and Halvorsen Institute of Technology.\n- Tiruvallur Test Bed — MONSOON; jointly operated by Southern Peninsula Institute of Science and Deccan Power Corporation."
+  },
+  {
+    "question_no": 10,
+    "category": "Collaborator recommendation",
+    "question": "Suggest pairs of researchers who have never co-authored but share at least one common co-author, and whose work relates to the same technology area.",
+    "query": "MATCH (a:Researcher)-[:AUTHORED]->(:Publication)<-[:AUTHORED]-(common:Researcher)-[:AUTHORED]->(:Publication)<-[:AUTHORED]-(b:Researcher)\nWHERE a.id < b.id AND NOT EXISTS { MATCH (a)-[:AUTHORED]->(:Publication)<-[:AUTHORED]-(b) }\nWITH DISTINCT a, b, common ORDER BY common.name\nWITH a, b, collect(common.name) AS common_coauthors\nMATCH (a)-[:AUTHORED]->(paper_a:Publication)-[:ABOUT]->(topic:Technology)<-[:ABOUT]-(paper_b:Publication)<-[:AUTHORED]-(b)\nWITH a, b, common_coauthors, topic, paper_a, paper_b ORDER BY topic.name, paper_a.title, paper_b.title\nRETURN a.name AS researcher_1, b.name AS researcher_2, common_coauthors, collect(DISTINCT topic.name) AS shared_technologies, collect(DISTINCT {technology: topic.name, researcher_1_paper: paper_a.title, researcher_2_paper: paper_b.title}) AS topic_evidence, 'No co-authorship recorded in this corpus' AS scope\nORDER BY researcher_1, researcher_2",
+    "llm_answer": "These pairs have no co-authored publication recorded in the corpus.\n\n- Ingrid Solberg — Markus Weber\n  Common co-author: Katarina Novak. Shared topic: sodium-ion cathode materials.\n- Sofia Lindqvist — Katarina Novak\n  Common co-author: Ingrid Solberg. Shared topic: sodium-ion batteries.\n- Tomas Berg — Elena Voss\n  Common co-author: Ingrid Solberg. Shared topic: sodium-ion batteries.\n- Ingrid Solberg — Hannah Brooks\n  Common co-author: Sofia Lindqvist. Shared topic: battery degradation modelling.\n- Sofia Lindqvist — Li Wei\n  Common co-authors: Daniel Okafor and Hannah Brooks. Shared topics: load forecasting and forecast-aware dispatch."
+  }
+]
